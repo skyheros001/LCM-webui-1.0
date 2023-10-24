@@ -1,3 +1,8 @@
+### 部署：
+1. pip install -r requirements.txt
+2. python app.py
+
+
 相关文章：
 https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7
 https://latent-consistency-models.github.io/
