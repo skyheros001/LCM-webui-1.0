@@ -1,3 +1,5 @@
+![info](https://github.com/skyheros001/LCM-webui-1.0/assets/32533832/9bb6221a-8055-4950-a3eb-d2b89efebba9)
+
 ### 部署：
 1. pip install -r requirements.txt
 2. python app.py
