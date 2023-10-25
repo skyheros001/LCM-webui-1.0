@@ -3,6 +3,7 @@
 ### 部署：
 1. pip install -r requirements.txt
 2. python app.py
+3. 新增 python app_1B.py 支持 segmind/SSD-1B
 
 ### 报错异常：
 1. 故障: ValueError: Non-consecutive added token '<|startoftext|>' found. Should have index 49408 but has index 49406 in saved vocabulary.
