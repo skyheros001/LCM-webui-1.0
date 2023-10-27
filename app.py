@@ -9,6 +9,8 @@ import os
 import gc
 import random
 import time
+from PIL import PngImagePlugin
+from datetime import datetime
 
 # Only used when MULTI_GPU set to True
 from helper import UNetDataParallel
@@ -40,7 +42,8 @@ if default_num_images < 1:
 share = os.getenv("SHARE", "false").lower() == "true"
 
 print("Loading model", model_key_base)
-pipe = DiffusionPipeline.from_pretrained(model_key_base, custom_pipeline="latent_consistency_txt2img", custom_revision="main", from_flax=False, safety_checker=None)
+pipe = DiffusionPipeline.from_pretrained(model_key_base, custom_pipeline="latent_consistency_txt2img",
+                                         custom_revision="main", from_flax=False, safety_checker=None)
 pipe.to(torch_device="cuda", torch_dtype=torch.float16)
 
 multi_gpu = os.getenv("MULTI_GPU", "false").lower() == "true"
@@ -69,7 +72,7 @@ def generate_latents(samples, width, height, in_channels, seed_base):
     generator = torch.Generator(device=device)
 
     latents = None
-    seeds: List[int] = []
+    seeds = []
 
     seed_base1 = int(seed_base)
     seed_base1 = get_fixed_seed(seed_base1)
@@ -92,6 +95,13 @@ def generate_latents(samples, width, height, in_channels, seed_base):
 
 is_gpu_busy = False
 def infer(prompt, scale, samples, steps, width, height, seed=-1):
+    png_info = PngImagePlugin.PngInfo()
+    png_info.add_text(
+        "Info",
+        f"prompt: {prompt}; CFG: {scale}; Width: {width}; "
+        f"Height: {height}; Seed: {seed}; Step: {steps}"
+    )
+
     # prompt, negative = [prompt] * samples, [negative] * samples
     prompt = [prompt] * samples
     g = torch.Generator(device="cuda")
@@ -107,7 +117,7 @@ def infer(prompt, scale, samples, steps, width, height, seed=-1):
         
     images_b64_list = []
 
-    images = pipe(prompt=prompt, guidance_scale=scale, num_inference_steps=steps, lcm_origin_steps=50,output_type="pil",latents=latents).images
+    images = pipe(prompt=prompt, guidance_scale=scale, num_inference_steps=steps, lcm_origin_steps=50, output_type="pil", latents=latents).images
                   
     gc.collect()
     torch.cuda.empty_cache()
@@ -115,7 +125,13 @@ def infer(prompt, scale, samples, steps, width, height, seed=-1):
     outpath = "output"
     if not os.path.exists(outpath):
         os.makedirs(outpath)
-            
+        
+    today_date = datetime.today().strftime("%Y-%m-%d")
+    new_folder_path = os.path.join(outpath, today_date)
+    if not os.path.exists(new_folder_path):
+        os.makedirs(new_folder_path)
+    outpath = new_folder_path
+    
     for image in images:
         buffered = BytesIO()
         image.save(buffered, format="JPEG")
@@ -129,7 +145,7 @@ def infer(prompt, scale, samples, steps, width, height, seed=-1):
         if os.path.exists(os.path.join(outpath, original_filename)):
             timestamp10 = int(time.time())
             original_filename = f'grid-{grid_count:04}-{timestamp10}.png'
-        image.save(os.path.join(outpath, original_filename))
+        image.save(os.path.join(outpath, original_filename), pnginfo=png_info)
             
     return images_b64_list
     
